@@ -10,8 +10,8 @@ Usage: $0 [-x 0-9] [-n] -u <username> <appid [appid...]>
 Options:
          -h     |  Displays this message
          -x N   |  [default: 9] Sets 7z archive compression level
-         -n     |  Nuke depotcache and steamapps before downloading" 1>&2; exit 1
-         -u     |  Username to login to Steam
+         -n     |  Nuke depotcache and steamapps before downloading
+         -u     |  Username to login to Steam" 1>&2; exit 1
 }
 
 function main {
