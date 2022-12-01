@@ -4,6 +4,8 @@ steamcmd wrapper to download and compress games
 
 rec'd usage: `./steampkg.sh -u <username> <appid>`
 
+requires: python3, jq, 7z
+
 todo:
 
  - allow selection for beta branches (unsure), bitness, language
