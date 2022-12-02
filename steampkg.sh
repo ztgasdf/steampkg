@@ -7,14 +7,18 @@ Usage: $0 [optional args...] -u <username> appid [appid...]
 
 Options:
          -h     |  Displays this message
+         -b     |  Set branch
+         -c     |  Set branch password
          -p     |  [default: windows] Set install platform [windows/macos/linux]
          -x     |  [default: 64] Set bitness [32/64]
          -l N   |  [default: 9] Sets 7z archive compression level
-         -n     |  Nuke depotcache and steamapps before downloading
+         -n     |  Nuke depotcache and steamapps before downloading (recommended)
          -u     |  Username to login to Steam
 
 This script requires your config.vdf file located in config/ to be renamed
-to <steam username>.vdf. This allows effcient multi-account management." 1>&2; exit 1
+to <steam username>.vdf. This allows effcient multi-account management.
+
+If -b/-c is passed, the script will only download the *first* appid given." 1>&2; exit 1
 }
 
 function main {
@@ -55,7 +59,13 @@ echo Done\!
 function download {
 [[ "${p}" ]] && : || p="windows"
 [[ "${x}" ]] && : || x="64"
-unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" validate +quit | grep --line-buffered -iE 'update|success|install|clean|ok|check|package|extract'
+# i hate steam i hate steam i hate steam i hate steam
+[[ "${b}" ]] && : || b=" "
+if [[ "${c}" ]]; then
+unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep --line-buffered -iE 'update|success|install|clean|ok|check|package|extract|='
+else
+unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -beta "${b}" -validate +quit | grep --line-buffered -iE 'update|success|install|clean|ok|check|package|extract|='
+fi
 }
 
 function clean {
@@ -68,7 +78,7 @@ function getacfinfo {
 # https://gist.github.com/ynsta/7221512c583fbfbafe6d
 ACF=$(python vdf2json.py -i steamapps/appmanifest_"${i}".acf)
 # Get archive filename (You may need to rename the first part)
-FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+") [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
+FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+")" + (if (.AppState.UserConfig.BetaKey) then " [Branch "+.AppState.UserConfig.BetaKey+"]" else "" end) + " [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
 # Get install directory to add to archive
 INSTALLDIR=$(echo "${ACF}" | jq -r '.AppState.installdir')
 # Get depots and slap a wildcard to add to archive
@@ -88,7 +98,7 @@ function compress {
 checkprereqs
 
 # Set options for the script
-while getopts "hnp:x:u:l:" o; do
+while getopts "hnb:c:p:x:u:l:" o; do
     case "${o}" in
         h)
             usage
@@ -103,6 +113,13 @@ while getopts "hnp:x:u:l:" o; do
             ;;
         u)
             u=${OPTARG}
+            ;;
+        b)
+            b=${OPTARG}
+            ;;
+        c)
+            c=${OPTARG}
+            if [[ -z "${b}" ]]; then echo "Error: -b must be called before -c!"; exit 1; fi
             ;;
 	p)
 	    p=${OPTARG}
@@ -122,7 +139,7 @@ shift "$((OPTIND-1))"
 # If specified, check if vdf exists then replace config.vdf
 # TODO: Can steamcmd directly use <username>.vdf?
 # TODO?: Backup config.vdf before overwriting?
-if [ -z "${u}" ]; then
+if [[ -z "${u}" ]]; then
 echo "Error: No username specified. Make sure it's in config dir!"; exit 1
 else
 if [[ "${u}" == "config" ]]; then echo "Error: You can't use \"config\" as your username!"; exit 1; fi
@@ -135,9 +152,13 @@ fi
 if [[ "$#" == 0 ]]; then
 echo "Error: No appid specified"
 exit 1
+else
+# Error if branch is set and two or more appids are passed
+if [[ "$#" -ge 2 ]]; then if [[ "${b}" ]]; then echo "Error: You can only specify one appid if branch is set!"; exit 1; fi; fi
 fi
 
 # main loop, make sure functions are set properly so nothing breaks
 for i in $@; do
 main
 done
+
