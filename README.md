@@ -6,7 +6,7 @@ rec'd usage: `./steampkg.sh -u <username> <appid>`
 
 just check `./steampkg.sh -h` for everything this baby can handle
 
-requires: python3, jq, 7z
+requires: python3, jq, 7z, unbuffer (from expect package)
 
 todo:
 
