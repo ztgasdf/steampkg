@@ -8,9 +8,8 @@ requires: python3, jq, 7z
 
 todo:
 
- - allow selection for beta branches (unsure), bitness, language
+ - allow selection for beta branches (unsure),  language
  - clean up if conditions, and organise code
- - add documentation about username.vdf usage
  - maybe make it so i don't need a secondary python script?
 
 ---
