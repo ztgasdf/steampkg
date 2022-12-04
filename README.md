@@ -11,6 +11,7 @@ requires: python3, jq, 7z, unbuffer (from expect package)
 todo:
 
  - **add error handling**
+ - add check for existing steam install, add flags related to (such as disabling nuke entirely)
  - add if statement for goldsrc games, ref. linuxgsm [here](https://github.com/GameServerManagers/LinuxGSM/blob/master/lgsm/functions/core_dl.sh)
  - allow selection for language (needs a fat regex)
  - clean up if conditions, and organise code
