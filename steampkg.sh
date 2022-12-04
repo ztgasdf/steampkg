@@ -1,5 +1,14 @@
 #!/bin/bash
-#TODO clean shitty if statements
+
+## Regex variables
+# Check if appid consists only of numbers
+appidRegex='^[0-9]*$'
+# Clean up SteamCMD output (might be excessive)
+steamRegex='update|success|install|clean|ok|check|package|extract|='
+# Allow only these platforms to be used
+platformRegex='^(windows|linux|macos)$'
+# Allow only these bits to be used
+bitnessRegex='^(32|64)$'
 
 function usage {
 echo "steampkg, a SteamCMD wrapper for downloading & packaging games
@@ -18,11 +27,13 @@ Options:
 This script requires your config.vdf file located in config/ to be renamed
 to <steam username>.vdf. This allows effcient multi-account management.
 
-If -b/-c is passed, the script will only download the *first* appid given." 1>&2; exit 1
+If -b/-c is passed, the script will only download the *first* appid given."
+exit
 }
 
 function main {
 checkappid
+# Skip nuke if not called
 [[ "${nuke}" ]] && nuke || :
 download
 clean
@@ -31,53 +42,65 @@ compress
 }
 
 function checkappid {
-# check if appid is valid (numbers only)
-appidRegex='^[0-9]*$'
-if [[ "${i}" =~ $appidRegex ]]; then :; else echo "Error: Appid \"${i}\" is invalid!"; exit 1; fi
+if [[ "${i}" =~ $appidRegex ]]; then
+:
+else
+>&2 echo "Error: Appid \"${i}\" is invalid!"; exit 1
+fi
 }
 
 function checkprereqs {
 # check if required files and commands exist
-if [[ ! $(command -v 7z) ]]; then echo "7z not found! Closing."; exit 1; fi
-if [[ ! $(command -v jq) ]]; then echo "jq not found! Closing."; exit 1; fi
-if [[ ! $(command -v unbuffer) ]]; then echo "unbuffer not found! Closing."; exit 1; fi
-if [[ -f steamcmd.sh ]]; then :; else echo 'steamcmd.sh not found! Make sure '"$0"' is in the same directory.'; exit 1; fi
-if [[ -f vdf2json.py ]]; then :; else echo 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'; exit 1; fi
+if [[ ! $(command -v 7z) ]]; then >&2 echo '7z not found! Closing.'; exit 1; fi
+if [[ ! $(command -v jq) ]]; then >&2 echo 'jq not found! Closing.'; exit 1; fi
+if [[ ! $(command -v unbuffer) ]]; then >&2 echo "unbuffer not found! Closing."; exit 1; fi
+if [[ -f steamcmd.sh ]]; then :; else >&2 echo 'steamcmd.sh not found! Make sure '"$0"' is in the same directory.'; exit 1; fi
+if [[ -f vdf2json.py ]]; then :; else >&2 echo 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'; exit 1; fi
 }
 
 function nuke {
-# deletes depotcache and steamapps
-# ten second warning
-echo Purging depotcache and steamapps in 10 seconds\!
-echo CTRL-C TO STOP
+# Deletes depotcache and steamapps
+# Ten second warning period
+# TODO: Maybe make it interactive? "Press any key to stop."
+echo 'Purging depotcache and steamapps in 10 seconds!'
+echo 'CTRL-C TO STOP'
 sleep 10
-echo Deleting...
+echo 'Deleting...'
 rm -rf depotcache steamapps
-echo Done\!
+echo 'Done!'
 }
 
 function download {
+# If no platform is set, default to Windows
 [[ "${p}" ]] && : || p="windows"
+# If no bitness is set, default to 64bit
 [[ "${x}" ]] && : || x="64"
-# i hate steam i hate steam i hate steam i hate steam
+# SteamCMD handles beta branches weirdly. If a branch is set, it will
+# download said branch. If you run the script again, but with no branch
+# set (assuming NUKE is off), it will think that branch is still set and
+# it will download that branch. However, if you call -beta with a space
+# as its flag, it will unset the configured branch and download the default
+# branch available. That is what this if statement does.
 [[ "${b}" ]] && : || b=" "
+# If branch password is set, run with -betapassword called
 if [[ "${c}" ]]; then
-unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep --line-buffered -iE 'update|success|install|clean|ok|check|package|extract|='
+unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep --line-buffered -iE ${steamRegex}
 else
-unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -beta "${b}" -validate +quit | grep --line-buffered -iE 'update|success|install|clean|ok|check|package|extract|='
+unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep --line-buffered -iE ${steamRegex}
 fi
 }
 
 function clean {
+# Clears LastOwner value in manifest
 echo Cleaning appmanifest_"${i}".acf
 sed -i '/LastOwner/c\\t"LastOwner"\t\t"0"' steamapps/appmanifest_"${i}".acf
 }
 
 function getacfinfo {
-# Parse ACF info into JSON and load into variable
+# Parse manifest into JSON and load into variable
 # https://gist.github.com/ynsta/7221512c583fbfbafe6d
 ACF=$(python vdf2json.py -i steamapps/appmanifest_"${i}".acf)
-# Get archive filename (You may need to rename the first part)
+# Get archive filename (You may need to rename afterwords, as it uses the install directory)
 FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+")" + (if (.AppState.UserConfig.BetaKey) then " [Branch "+.AppState.UserConfig.BetaKey+"]" else "" end) + " [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
 # Get install directory to add to archive
 INSTALLDIR=$(echo "${ACF}" | jq -r '.AppState.installdir')
@@ -85,9 +108,9 @@ INSTALLDIR=$(echo "${ACF}" | jq -r '.AppState.installdir')
 DEPOTS=$(echo "${ACF}" | jq -r '.AppState.InstalledDepots | keys[] + "*"')
 }
 
-# Compress game using 7z
 function compress {
-# If compression level set, set variable; if not, max compression
+# Compress game using 7z
+# If compression level is not set, default to 9
 [[ "${l}" ]] && : || l=9
 # Run the damn thing!
 7z a -mx"${l}" "${FILENAME}" `for i in "${DEPOTS}"; do echo depotcache/"${i}"; done` steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
@@ -98,6 +121,7 @@ function compress {
 checkprereqs
 
 # Set options for the script
+# TODO: Organise/order it properly
 while getopts "hnb:c:p:x:u:l:" o; do
     case "${o}" in
         h)
@@ -109,7 +133,7 @@ while getopts "hnb:c:p:x:u:l:" o; do
         l)
             l=${OPTARG}
             compressRegex='^[0-9]$'
-	    if [[ "${l}" =~ $compressRegex ]]; then :; else echo "Error: Specified compression level is invalid! [0 none - 9 max]"; exit 1; fi
+	        if [[ "${l}" =~ $compressRegex ]]; then :; else echo "Error: Specified compression level is invalid! [0 none - 9 max]"; exit 1; fi
             ;;
         u)
             u=${OPTARG}
@@ -121,23 +145,20 @@ while getopts "hnb:c:p:x:u:l:" o; do
             c=${OPTARG}
             if [[ -z "${b}" ]]; then echo "Error: -b must be called before -c!"; exit 1; fi
             ;;
-	p)
-	    p=${OPTARG}
-	    platformRegex='^(windows|linux|macos)$'
-	    if [[ "${p}" =~ $platformRegex ]]; then :; else echo "Error: Specified platform is invalid! [windows/linux/macos]"; exit 1; fi
-	    ;;
-	x)
-	    x=${OPTARG}
-	    bitnessRegex='^(32|64)$'
-	    if [[ "${x}" =~ $bitnessRegex ]]; then :; else echo "Error: Specified bitness is invalid! [32/64]"; exit 1; fi
-	    ;;
+	    p)
+	        p=${OPTARG}
+    	    if [[ "${p}" =~ $platformRegex ]]; then :; else echo "Error: Specified platform is invalid! [windows/linux/macos]"; exit 1; fi
+    	    ;;
+    	x)
+    	    x=${OPTARG}
+    	    if [[ "${x}" =~ $bitnessRegex ]]; then :; else echo "Error: Specified bitness is invalid! [32/64]"; exit 1; fi
+    	    ;;
     esac
 done
 shift "$((OPTIND-1))"
 
 # Error if username was not specified
 # If specified, check if vdf exists then replace config.vdf
-# TODO: Can steamcmd directly use <username>.vdf?
 # TODO?: Backup config.vdf before overwriting?
 if [[ -z "${u}" ]]; then
 echo "Error: No username specified. Make sure it's in config dir!"; exit 1
@@ -147,8 +168,7 @@ if [[ -f "config/${u}.vdf" ]]; then :; else echo "Error: ${u}.vdf does not exist
 cp config/$u.vdf config/config.vdf
 fi
 
-# see shift "$((OPTIND-1))"
-# errors out when nothing is specified
+# Self-explanatory, error out when nothing is specified
 if [[ "$#" == 0 ]]; then
 echo "Error: No appid specified"
 exit 1
