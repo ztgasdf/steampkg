@@ -24,11 +24,11 @@ Options:
          -p     |  [default: windows] Set install platform [windows/macos/linux]
          -x     |  [default: 64] Set bitness [32/64]
          -l N   |  [default: 9] Sets 7z archive compression level
-         -n     |  Nuke depotcache and steamapps before downloading (recommended)
+         -n     |  Nuke depotcache and steamapps before downloading
          -u     |  Username to login to Steam
 
 This script requires your config.vdf file located in config/ to be renamed
-to <steam username>.vdf. This allows effcient multi-account management.
+to <steam username>.vdf. This allows efficient multi-account management.
 
 If -b/-c is passed, the script will only download the *first* appid given."
 exit
@@ -37,7 +37,7 @@ exit
 function main {
 checkappid
 # Skip nuke if not called
-[[ "${nuke}" ]] && nuke || :
+[[ "${nuke}" ]] && nukecheck || :
 download
 clean
 getacfinfo
@@ -60,16 +60,37 @@ if [[ -f steamcmd.sh ]]; then :; else >&2 echo 'steamcmd.sh not found! Make sure
 if [[ -f vdf2json.py ]]; then :; else >&2 echo 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'; exit 1; fi
 }
 
+function nukecheck {
+
+if [[ "${STEAMALREADYEXISTS}" ]]; then
+  if [[ "${nuke}" == 2 ]]; then
+    nuke
+    return
+  fi
+
+  echo "WARNING: An installation of Steam already exists! (${STEAMROOT})"
+  echo 'Already installed games may interfere with the packaging process (user data, etc.)'
+  echo 'Running the nuke command will irreparably delete your depotcache and steamapps folder!'
+
+  while true; do
+    read -p 'Are you sure you want to continue? (y/n) ' yn
+    case $yn in
+      [yY] ) nuke; return;;
+      [nN] ) echo Closing...;
+             exit;;
+         * ) echo Invalid response;;
+    esac
+  done
+else
+  nuke
+fi
+}
+
 function nuke {
-# Deletes depotcache and steamapps
-# Ten second warning period
-# TODO: Maybe make it interactive? "Press any key to stop."
-echo 'Purging depotcache and steamapps in 10 seconds!'
-echo 'CTRL-C TO STOP'
-sleep 10
-echo 'Deleting...'
-rm -rf depotcache steamapps
-echo 'Done!'
+nuke=2
+echo 'Deleting depotcache and steamapps...'
+rm -rf "${STEAMROOT}/depotcache" "${STEAMROOT}/steamapps"
+echo 'Done! Continuing.'
 }
 
 function download {
@@ -198,10 +219,14 @@ else
     exit 1
   fi
   if [[ -f "${STEAMROOT}/config/config.vdf" ]]; then
-  echo Backing up existing config.vdf...
-  cp -v "${STEAMROOT}/config/config.vdf" "backups/config-$(date -u +%s).vdf"
+    echo "Backing up existing config.vdf..."
+    cp -v "${STEAMROOT}/config/config.vdf" "backups/config-$(date -u +%s).vdf"
+    echo "Overwriting config with ${u}.vdf..."
+    cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
+  else
+    mkdir -p "${STEAMROOT}/config"
+    cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
   fi
-  cp "config/$u.vdf" "${STEAMROOT}/config/config.vdf"
 fi
 
 # Self-explanatory, error out when nothing is specified
