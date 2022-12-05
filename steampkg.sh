@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Store current directory
+MAINDIR="${PWD}"
+
 ## Regex variables
 # Check if appid consists only of numbers
 appidRegex='^[0-9]*$'
@@ -42,10 +45,9 @@ compress
 }
 
 function checkappid {
-if [[ "${i}" =~ $appidRegex ]]; then
-:
-else
->&2 echo "Error: Appid \"${i}\" is invalid!"; exit 1
+if [[ ! "${i}" =~ $appidRegex ]]; then
+  >&2 echo "Error: Appid \"${i}\" is invalid!"
+  exit 1
 fi
 }
 
@@ -93,13 +95,13 @@ fi
 function clean {
 # Clears LastOwner value in manifest
 echo Cleaning appmanifest_"${i}".acf
-sed -i '/LastOwner/c\\t"LastOwner"\t\t"0"' steamapps/appmanifest_"${i}".acf
+sed -i '/LastOwner/c\\t"LastOwner"\t\t"0"' "${STEAMROOT}/steamapps/appmanifest_${i}".acf
 }
 
 function getacfinfo {
 # Parse manifest into JSON and load into variable
 # https://gist.github.com/ynsta/7221512c583fbfbafe6d
-ACF=$(python vdf2json.py -i steamapps/appmanifest_"${i}".acf)
+ACF=$(python vdf2json.py -i "${STEAMROOT}/steamapps/appmanifest_${i}.acf")
 # Get archive filename (You may need to rename afterwords, as it uses the install directory)
 FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+")" + (if (.AppState.UserConfig.BetaKey) then " [Branch "+.AppState.UserConfig.BetaKey+"]" else "" end) + " [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
 # Get install directory to add to archive
@@ -113,12 +115,35 @@ function compress {
 # If compression level is not set, default to 9
 [[ "${l}" ]] && : || l=9
 # Run the damn thing!
-7z a -mx"${l}" "${FILENAME}" `for i in "${DEPOTS}"; do echo depotcache/"${i}"; done` steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
+cd "${STEAMROOT}"
+7z a -mx"${l}" "${MAINDIR}/archives/${FILENAME}" `for i in "${DEPOTS}"; do echo "depotcache/${i}"; done` steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
+cd "${MAINDIR}"
 }
 
 # Check for missing commands and files BEFORE anything starts
 # TODO: Make it look pretty!
 checkprereqs
+
+# Check for existing steam install
+if [[ -d "$HOME/.steam/steam" ]]; then
+  STEAMALREADYEXISTS=1
+  if [[ -L $HOME/.steam/steam ]]; then
+    STEAMROOT="$(realpath $HOME/.steam/steam)"
+  else
+    STEAMROOT="$HOME/.steam/steam"
+  fi
+else
+  STEAMROOT="$HOME/Steam"
+fi
+
+if [[ "${STEAMALREADYEXISTS}" ]]; then
+  echo "Existing steam location found at ${STEAMROOT}."
+fi
+
+# backups: config.vdf backups
+# archives: finished game archives
+mkdir -p backups
+mkdir -p archives
 
 # Set options for the script
 # TODO: Organise/order it properly
@@ -133,7 +158,7 @@ while getopts "hnb:c:p:x:u:l:" o; do
         l)
             l=${OPTARG}
             compressRegex='^[0-9]$'
-	        if [[ "${l}" =~ $compressRegex ]]; then :; else echo "Error: Specified compression level is invalid! [0 none - 9 max]"; exit 1; fi
+	        if [[ "${l}" =~ $compressRegex ]]; then :; else >&2 echo "Error: Specified compression level is invalid! [0 none - 9 max]"; exit 1; fi
             ;;
         u)
             u=${OPTARG}
@@ -143,15 +168,15 @@ while getopts "hnb:c:p:x:u:l:" o; do
             ;;
         c)
             c=${OPTARG}
-            if [[ -z "${b}" ]]; then echo "Error: -b must be called before -c!"; exit 1; fi
+            if [[ -z "${b}" ]]; then >&2 echo "Error: -b must be called before -c!"; exit 1; fi
             ;;
 	    p)
 	        p=${OPTARG}
-    	    if [[ "${p}" =~ $platformRegex ]]; then :; else echo "Error: Specified platform is invalid! [windows/linux/macos]"; exit 1; fi
+    	    if [[ "${p}" =~ $platformRegex ]]; then :; else >&2 echo "Error: Specified platform is invalid! [windows/linux/macos]"; exit 1; fi
     	    ;;
     	x)
     	    x=${OPTARG}
-    	    if [[ "${x}" =~ $bitnessRegex ]]; then :; else echo "Error: Specified bitness is invalid! [32/64]"; exit 1; fi
+    	    if [[ "${x}" =~ $bitnessRegex ]]; then :; else >&2 echo "Error: Specified bitness is invalid! [32/64]"; exit 1; fi
     	    ;;
     esac
 done
@@ -161,24 +186,39 @@ shift "$((OPTIND-1))"
 # If specified, check if vdf exists then replace config.vdf
 # TODO?: Backup config.vdf before overwriting?
 if [[ -z "${u}" ]]; then
-echo "Error: No username specified. Make sure it's in config dir!"; exit 1
+  >&2 echo "Error: No username specified. Make sure it's in config dir!"
+  exit 1
 else
-if [[ "${u}" == "config" ]]; then echo "Error: You can't use \"config\" as your username!"; exit 1; fi
-if [[ -f "config/${u}.vdf" ]]; then :; else echo "Error: ${u}.vdf does not exist! Check \`$0 -h\` for help."; exit 1; fi
-cp config/$u.vdf config/config.vdf
+  if [[ "${u}" == "config" ]]; then
+    >&2 echo "Error: You can't use \"config\" as your username!"
+    exit 1
+  fi
+  if [[ ! -f "config/${u}.vdf" ]]; then
+    >&2 echo "Error: ${u}.vdf does not exist! Check \`$0 -h\` for help."
+    exit 1
+  fi
+  if [[ -f "${STEAMROOT}/config/config.vdf" ]]; then
+  echo Backing up existing config.vdf...
+  cp -v "${STEAMROOT}/config/config.vdf" "backups/config-$(date -u +%s).vdf"
+  fi
+  cp "config/$u.vdf" "${STEAMROOT}/config/config.vdf"
 fi
 
 # Self-explanatory, error out when nothing is specified
 if [[ "$#" == 0 ]]; then
-echo "Error: No appid specified"
-exit 1
+  >&2 echo "Error: No appid specified"
+  exit 1
 else
-# Error if branch is set and two or more appids are passed
-if [[ "$#" -ge 2 ]]; then if [[ "${b}" ]]; then echo "Error: You can only specify one appid if branch is set!"; exit 1; fi; fi
+  # Error if branch is set and two or more appids are passed
+  if [[ "$#" -ge 2 ]]; then
+    if [[ "${b}" ]]; then
+      >&2 echo "Error: You can only specify one appid if branch is set!"
+      exit 1
+    fi
+  fi
 fi
 
 # main loop, make sure functions are set properly so nothing breaks
 for i in $@; do
 main
 done
-
