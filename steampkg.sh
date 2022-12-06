@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# ain't no one got time for functional error handling
+set -e
+
 # Store current directory
 MAINDIR="${PWD}"
 
