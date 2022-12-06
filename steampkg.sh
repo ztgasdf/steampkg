@@ -130,10 +130,24 @@ function download {
   [[ "${b}" ]] && : || b=" "
   # If branch password is set, run with -betapassword called
   if [[ "${c}" ]]; then
-    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep --line-buffered -iE ${steamRegex}
+    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
+    errorcheck
   else
-    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep --line-buffered -iE ${steamRegex}
+    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep -iE ${steamRegex}
+    errorcheck
   fi
+}
+
+function errorcheck {
+if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
+  if [[ "${ohno}" -eq 2 ]]; then
+    echo >&2 'Error: SteamCMD failed after retry, halting.'
+    exit 1
+  fi
+  ((ohno=ohno+1))
+  echo 'Warning: SteamCMD failed with error 8. Retrying!'
+  download
+fi
 }
 
 function clean {
