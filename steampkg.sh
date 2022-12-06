@@ -166,13 +166,10 @@ function compress {
 checkprereqs
 
 # Check for existing steam install
+# Fuck ya symlink
 if [[ -d "$HOME/.steam/steam" ]]; then
   STEAMALREADYEXISTS=1
-  if [[ -L "$HOME/.steam/steam" ]]; then
-    STEAMROOT="$(realpath $HOME/.steam/steam)"
-  else
-    STEAMROOT="$HOME/.steam/steam"
-  fi
+  STEAMROOT="$(realpath $HOME/.steam/steam)"
 else
   STEAMROOT="$HOME/Steam"
 fi
