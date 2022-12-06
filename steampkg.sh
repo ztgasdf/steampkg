@@ -10,7 +10,7 @@ MAINDIR="${PWD}"
 # Check if appid consists only of numbers
 appidRegex='^[0-9]*$'
 # Clean up SteamCMD output (might be excessive)
-steamRegex='update|success|install|clean|ok|check|package|extract|='
+steamRegex='update|success|install|clean|ok|check|package|extract|workshop|='
 # Allow only these platforms to be used
 platformRegex='^(windows|linux|macos)$'
 # Allow only these bits to be used
