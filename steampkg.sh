@@ -136,7 +136,7 @@ function download {
 function clean {
   # Clears LastOwner value in manifest
   echo Cleaning appmanifest_"${i}".acf
-  sed -i '/LastOwner/c\\t"LastOwner"\t\t"0"' "${STEAMROOT}/steamapps/appmanifest_${i}".acf
+  sed -i '/LastOwner/c\\t"LastOwner"\t\t"0"' "${STEAMROOT}/steamapps/appmanifest_${i}.acf"
 }
 
 function getacfinfo {
