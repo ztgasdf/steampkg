@@ -142,7 +142,7 @@ function clean {
 function getacfinfo {
   # Parse manifest into JSON and load into variable
   # https://gist.github.com/ynsta/7221512c583fbfbafe6d
-  ACF=$(python vdf2json.py -i "${STEAMROOT}/steamapps/appmanifest_${i}.acf")
+  ACF=$(python3 vdf2json.py -i "${STEAMROOT}/steamapps/appmanifest_${i}.acf")
   # Get archive filename (You may need to rename afterwords, as it uses the install directory)
   FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+")" + (if (.AppState.UserConfig.BetaKey) then " [Branch "+.AppState.UserConfig.BetaKey+"]" else "" end) + " [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
   # Get install directory to add to archive
@@ -168,7 +168,7 @@ checkprereqs
 # Check for existing steam install
 if [[ -d "$HOME/.steam/steam" ]]; then
   STEAMALREADYEXISTS=1
-  if [[ -L $HOME/.steam/steam ]]; then
+  if [[ -L "$HOME/.steam/steam" ]]; then
     STEAMROOT="$(realpath $HOME/.steam/steam)"
   else
     STEAMROOT="$HOME/.steam/steam"
