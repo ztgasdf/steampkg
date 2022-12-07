@@ -28,12 +28,10 @@ Options:
          -x     |  [default: 64] Set bitness [32/64]
          -l N   |  [default: 9] Sets 7z archive compression level
          -n     |  Nuke depotcache and steamapps before downloading
-         -u     |  Username to login to Steam
+         -u     |  Username to login to Steam*
 
-This script requires your config.vdf file located in config/ to be renamed
-to <steam username>.vdf. This allows efficient multi-account management.
-
-If -b/-c is passed, the script will only download the *first* appid given."
+Refer to the README about account management.
+If -b/-c is passed, the script will only download the *first* appid specified."
   exit
 }
 
@@ -86,9 +84,9 @@ function nukecheck {
       return
     fi
 
-    echo "WARNING: An installation of Steam already exists! (${STEAMROOT})"
-    echo 'Already installed games may interfere with the packaging process (user data, etc.)'
-    echo 'Running the nuke command will irreparably delete your depotcache and steamapps folder!'
+    echo >&2 "WARNING: An installation of Steam already exists! (${STEAMROOT})"
+    echo >&2 'Already installed games may interfere with the packaging process (user data, etc.)'
+    echo >&2 'Running the nuke command will irreparably delete your depotcache and steamapps folder!'
 
     while true; do
       read -p 'Are you sure you want to continue? (y/n) ' yn
@@ -145,7 +143,7 @@ if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
     exit 1
   fi
   ((ohno=ohno+1))
-  echo 'Warning: SteamCMD failed with error 8. Retrying!'
+  echo >&2 'Warning: SteamCMD failed with error 8. Retrying!'
   download
 fi
 }
@@ -261,7 +259,7 @@ else
     exit 1
   fi
   if [[ ! -f "config/${u}.vdf" ]]; then
-    echo >&2 "Error: ${u}.vdf does not exist! Check \`$0 -h\` for help."
+    echo >&2 "Error: ${u}.vdf does not exist! Check README for help."
     exit 1
   fi
   if [[ -f "${STEAMROOT}/config/config.vdf" ]]; then
@@ -271,6 +269,7 @@ else
     cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
   else
     mkdir -p "${STEAMROOT}/config"
+    echo "Copying ${u}.vdf to config..."
     cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
   fi
 fi
