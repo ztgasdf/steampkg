@@ -30,7 +30,7 @@ Options:
          -n     |  Nuke depotcache and steamapps before downloading
          -u     |  Username to login to Steam*
 
-Refer to the README about account management.
+Refer to the README for information about account management.
 If -b/-c is passed, the script will only download the *first* appid specified."
   exit
 }
