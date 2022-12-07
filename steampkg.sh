@@ -137,15 +137,15 @@ function download {
 }
 
 function errorcheck {
-if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
-  if [[ "${ohno}" -eq 2 ]]; then
-    echo >&2 'Error: SteamCMD failed after retry, halting.'
-    exit 1
+  if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
+    if [[ "${ohno}" -eq 2 ]]; then
+      echo >&2 'Error: SteamCMD failed after retry, halting.'
+      exit 1
+    fi
+    ((ohno=ohno+1))
+    echo >&2 'Warning: SteamCMD failed with error 8. Retrying!'
+    download
   fi
-  ((ohno=ohno+1))
-  echo >&2 'Warning: SteamCMD failed with error 8. Retrying!'
-  download
-fi
 }
 
 function clean {
