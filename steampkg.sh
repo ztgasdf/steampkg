@@ -77,7 +77,8 @@ function checkprereqs {
 }
 
 function nukecheck {
-
+  # If Steam exists, check if nuke was already confirmed. If yes, skip check and nuke
+  # If not, prompt warning.
   if [[ "${STEAMALREADYEXISTS}" ]]; then
     if [[ "${nuke}" == 2 ]]; then
       nuke
@@ -108,6 +109,8 @@ function nukecheck {
 }
 
 function nuke {
+  # Sets nuke variable so check won't run if multiple appids are specified
+  # TODO, maybe check if folders exist or not? don't know if it's needed..
   nuke=2
   echo 'Deleting depotcache and steamapps...'
   rm -rf "${STEAMROOT}/depotcache" "${STEAMROOT}/steamapps"
@@ -115,6 +118,10 @@ function nuke {
 }
 
 function download {
+  # Delete appinfo.vdf because caches are evil
+  if [[ -f "${STEAMROOT}/appcache/appinfo.vdf" ]]; then
+    rm "${STEAMROOT}/appcache/appinfo.vdf"
+  fi
   # If no platform is set, default to Windows
   [[ "${p}" ]] && : || p="windows"
   # If no bitness is set, default to 64bit
@@ -247,9 +254,23 @@ while getopts "hnb:c:p:x:u:l:" o; do
 done
 shift "$((OPTIND - 1))"
 
+# Self-explanatory, error out when nothing is specified
+if [[ "$#" == 0 ]]; then
+  echo >&2 "Error: No appid specified"
+  exit 1
+else
+  # Error if branch is set and two or more appids are passed
+  if [[ "$#" -ge 2 ]]; then
+    if [[ "${b}" ]]; then
+      echo >&2 "Error: You can only specify one appid if branch is set!"
+      exit 1
+    fi
+  fi
+fi
+
 # Error if username was not specified
 # If specified, check if vdf exists then replace config.vdf
-# TODO?: Backup config.vdf before overwriting?
+# it also backs up the original config if it exists
 if [[ -z "${u}" ]]; then
   echo >&2 "Error: No username specified. Make sure it's in config dir!"
   exit 1
@@ -271,20 +292,6 @@ else
     mkdir -p "${STEAMROOT}/config"
     echo "Copying ${u}.vdf to config..."
     cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
-  fi
-fi
-
-# Self-explanatory, error out when nothing is specified
-if [[ "$#" == 0 ]]; then
-  echo >&2 "Error: No appid specified"
-  exit 1
-else
-  # Error if branch is set and two or more appids are passed
-  if [[ "$#" -ge 2 ]]; then
-    if [[ "${b}" ]]; then
-      echo >&2 "Error: You can only specify one appid if branch is set!"
-      exit 1
-    fi
   fi
 fi
 
