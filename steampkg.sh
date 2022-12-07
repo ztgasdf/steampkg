@@ -193,6 +193,9 @@ if [[ -d "$HOME/.steam/steam" ]]; then
   STEAMALREADYEXISTS=1
   STEAMROOT="$(realpath $HOME/.steam/steam)"
 else
+  if [[ -d "$HOME/Steam" ]]; then
+    STEAMALREADYEXISTS=1
+  fi
   STEAMROOT="$HOME/Steam"
 fi
 
