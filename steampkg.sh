@@ -29,6 +29,7 @@ Options:
          -l N   |  [default: 9] Sets 7z archive compression level
          -n     |  Nuke depotcache and steamapps before downloading
          -u     |  Username to login to Steam*
+         -f     |  internal: get checksum and forum text (publicinfos)
 
 Refer to the README for information about account management.
 If -b/-c is passed, the script will only download the *first* appid specified."
@@ -43,6 +44,7 @@ function main {
   clean
   getacfinfo
   compress
+  [[ "${f}" ]] && checksumforum || :
 }
 
 function checkappid {
@@ -63,7 +65,7 @@ function checkprereqs {
     exit 1
   fi
   if [[ ! $(command -v unbuffer) ]]; then
-    echo >&2 "unbuffer not found! Closing."
+    echo >&2 'unbuffer not found! Closing.'
     exit 1
   fi
   if [[ -f steamcmd.sh ]]; then :; else
@@ -73,6 +75,12 @@ function checkprereqs {
   if [[ -f vdf2json.py ]]; then :; else
     echo >&2 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'
     exit 1
+  fi
+  if [[ "${f}" ]]; then
+    if [[ ! $(command -v b3sum) ]]; then
+      echo >&2 'b3sum not found! Closing.'
+      exit 1
+    fi
   fi
 }
 
@@ -183,6 +191,16 @@ function compress {
   cd "${MAINDIR}"
 }
 
+function checksumforum {
+  echo 'Getting checksum...'
+  CHECKSUM=$(b3sum "${MAINDIR}/archives/${FILENAME}" | cut -f1 -d' ')
+  SIZE=${stat -c %s "${MAINDIR}/archives/${FILENAME}"}
+  FMTSIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}" | numfmt --to=iec-i --suffix=B --format="%.3f")
+  echo "${CHECKSUM} | ${FILENAME} | ${SIZE}" >> publicinfos
+  echo "[url=https://z.tess.eu.org/rin/${CHECKSUM}][b][color=#FFFFFF]${FILENAME}[/color][/b][/url] [size=85][color=#FFFFFF]${SIZE}[/color][/size]" >> publicinfos
+  echo 'Done!'
+}
+
 # Check for missing commands and files BEFORE anything starts
 # TODO: Make it look pretty!
 checkprereqs
@@ -210,13 +228,16 @@ mkdir -p archives
 
 # Set options for the script
 # TODO: Organise/order it properly
-while getopts "hnb:c:p:x:u:l:" o; do
+while getopts "hnfb:c:p:x:u:l:" o; do
   case "${o}" in
   h)
     usage
     ;;
   n)
     nuke=1
+    ;;
+  f)
+    f=1
     ;;
   l)
     l=${OPTARG}
