@@ -197,7 +197,7 @@ function checksumforum {
   SIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}")
   FMTSIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}" | numfmt --to=iec-i --suffix=B --format="%.3f")
   echo "${CHECKSUM} | ${FILENAME} | ${SIZE}" >> publicinfos
-  echo "[url=https://z.tess.eu.org/rin/${CHECKSUM}][b][color=#FFFFFF]${FILENAME}[/color][/b][/url] [size=85][color=#FFFFFF]${SIZE}[/color][/size]" >> publicinfos
+  echo "[url=https://z.tess.eu.org/rin/${CHECKSUM}][b][color=#FFFFFF]${FILENAME}[/color][/b][/url] [size=85][color=#FFFFFF]${FMTSIZE}[/color][/size]" >> publicinfos
   echo 'Done!'
 }
 
