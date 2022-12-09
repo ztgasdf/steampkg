@@ -233,9 +233,11 @@ while getopts "hnfb:c:p:x:u:l:" o; do
   h)
     usage
     ;;
-  n)
-    nuke=1
-    ;;
+  n)                                                                        
+    if [[ ! "${nuke}" == 2 ]]; then                                     
+      nuke=1
+    fi
+    ;;                             
   f)
     f=1
     ;;
