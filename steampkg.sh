@@ -177,8 +177,8 @@ function getacfinfo {
   FILENAME=$(echo "${ACF}" | jq -r '.AppState.installdir+" ("+.AppState.appid+")" + (if (.AppState.UserConfig.BetaKey) then " [Branch "+.AppState.UserConfig.BetaKey+"]" else "" end) + " [Depot "+(.AppState.InstalledDepots | keys | join(","))+"] [Build "+.AppState.buildid+"].7z"')
   # Get install directory to add to archive
   INSTALLDIR=$(echo "${ACF}" | jq -r '.AppState.installdir')
-  # Get depots and slap a wildcard to add to archive
-  DEPOTS=$(echo "${ACF}" | jq -r '.AppState.InstalledDepots | keys[] + "*"')
+  # Get depots and turn into array
+  DEPOTS=($(echo "${ACF}" | jq -r '.AppState.InstalledDepots | to_entries[] |(.key)+"_"+(.value.manifest)+".manifest"'))
 }
 
 function compress {
@@ -187,7 +187,7 @@ function compress {
   [[ "${l}" ]] && : || l=9
   # Run the damn thing!
   cd "${STEAMROOT}"
-  7z a -mx"${l}" "${MAINDIR}/archives/${FILENAME}" $(for i in "${DEPOTS}"; do echo "depotcache/${i}"; done) steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
+  7z a -mx"${l}" "${MAINDIR}/archives/${FILENAME}" $(for i in "${DEPOTS[@]}"; do echo "depotcache/${i}"; done) steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
   cd "${MAINDIR}"
 }
 
