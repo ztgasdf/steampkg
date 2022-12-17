@@ -8,7 +8,7 @@ requirements: **steamcmd.sh** (not package), python3, jq, 7z, unbuffer (expect p
 
 ## Account management
 
-*Warning: If the script detects an existing config, it will create a backup of it located in `<script dir>/backups/`. **This will interfere with your existing Steam installation.** It is highly recommended that this script is run as a different user that does NOT have Steam installed (or an existing Steam folder.)*
+**Warning**: If the script detects an existing config, it will create a backup located in `<script dir>/backups/` and then overwrite the existing config. **This will interfere with your existing Steam installation.** It is highly recommended that this script is run as a different user that does NOT have Steam installed (or an existing Steam folder.)
 
 As you might have noticed, steampkg will refuse to run unless a username is specified *and* found in `<script dir>/config/`. steampkg utilises cached credentials that can be found in your `config/config.vdf` file in your local Steam insallation. Only three keys are actually required, however: Accounts, MTBF, ConnectCache. These values would be made into a new file labeled `<your username>.vdf` in `config/`, located in the same directory as the script.
 
