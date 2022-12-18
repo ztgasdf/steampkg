@@ -3,8 +3,9 @@
 # ain't no one got time for functional error handling
 set -e
 
-# Store current directory
-MAINDIR="${PWD}"
+# We're making this entire thing portable, I don't even care now
+HOME="$PWD"
+STEAMROOT="$PWD/Steam"
 
 ## Regex variables
 # Check if appid consists only of numbers
@@ -15,6 +16,8 @@ steamRegex='update|success|install|clean|ok|check|package|extract|workshop|versi
 platformRegex='^(windows|linux|macos)$'
 # Allow only these bits to be used
 bitnessRegex='^(32|64)$'
+# Allow only 0-9 to be used
+compressRegex='^[0-9]$'
 
 function usage {
   echo "steampkg, a SteamCMD wrapper for downloading & packaging games
@@ -68,11 +71,13 @@ function checkprereqs {
     echo >&2 'unbuffer not found! Closing.'
     exit 1
   fi
-  if [[ -f steamcmd.sh ]]; then :; else
-    echo >&2 'steamcmd.sh not found! Make sure '"$0"' is in the same directory.'
-    exit 1
+  if [[ ! -f "${STEAMROOT}/steamcmd.sh" ]]; then
+    echo 'steamcmd.sh not found! Downloading...'
+    mkdir -p "${STEAMROOT}"
+    curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - -C "${STEAMROOT}"
+    echo 'Done!'
   fi
-  if [[ -f vdf2json.py ]]; then :; else
+  if [[ ! -f vdf2json.py ]]; then
     echo >&2 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'
     exit 1
   fi
@@ -143,10 +148,10 @@ function download {
   [[ "${b}" ]] && : || b=" "
   # If branch password is set, run with -betapassword called
   if [[ "${c}" ]]; then
-    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
+    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
     errorcheck
   else
-    unbuffer ./steamcmd.sh +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep -iE ${steamRegex}
+    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep -iE ${steamRegex}
     errorcheck
   fi
 }
@@ -205,25 +210,7 @@ function checksumforum {
 # TODO: Make it look pretty!
 checkprereqs
 
-# Check for existing steam install
-# Fuck ya symlink
-if [[ -d "$HOME/.steam/steam" ]]; then
-  STEAMALREADYEXISTS=1
-  STEAMROOT="$(realpath $HOME/.steam/steam)"
-else
-  if [[ -d "$HOME/Steam" ]]; then
-    STEAMALREADYEXISTS=1
-  fi
-  STEAMROOT="$HOME/Steam"
-fi
-
-if [[ "${STEAMALREADYEXISTS}" ]]; then
-  echo "Existing steam location found at ${STEAMROOT}."
-fi
-
-# backups: config.vdf backups
 # archives: finished game archives
-mkdir -p backups
 mkdir -p archives
 
 # Set options for the script
@@ -233,17 +220,16 @@ while getopts "hnfb:c:p:x:u:l:" o; do
   h)
     usage
     ;;
-  n)                                                                        
-    if [[ ! "${nuke}" == 2 ]]; then                                     
+  n)
+    if [[ ! "${nuke}" == 2 ]]; then
       nuke=1
     fi
-    ;;                             
+    ;;
   f)
     f=1
     ;;
   l)
     l=${OPTARG}
-    compressRegex='^[0-9]$'
     if [[ "${l}" =~ $compressRegex ]]; then :; else
       echo >&2 "Error: Specified compression level is invalid! [0 none - 9 max]"
       exit 1
@@ -296,29 +282,21 @@ fi
 
 # Error if username was not specified
 # If specified, check if vdf exists then replace config.vdf
-# it also backs up the original config if it exists
 if [[ -z "${u}" ]]; then
-  echo >&2 "Error: No username specified. Make sure it's in config dir!"
+  echo >&2 "Error: No username specified!"
   exit 1
 else
   if [[ "${u}" == "config" ]]; then
     echo >&2 "Error: You can't use \"config\" as your username!"
     exit 1
   fi
-  if [[ ! -f "config/${u}.vdf" ]]; then
-    echo >&2 "Error: ${u}.vdf does not exist! Check README for help."
+  if [[ ! -f "accounts/${u}.vdf" ]]; then
+    echo >&2 "Error: ${u}.vdf does not exist! Make sure it's in config dir!"
     exit 1
   fi
-  if [[ -f "${STEAMROOT}/config/config.vdf" ]]; then
-    echo "Backing up existing config.vdf..."
-    cp -v "${STEAMROOT}/config/config.vdf" "backups/config-$(date -u +%s).vdf"
-    echo "Overwriting config with ${u}.vdf..."
-    cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
-  else
     mkdir -p "${STEAMROOT}/config"
     echo "Copying ${u}.vdf to config..."
-    cp -v "config/${u}.vdf" "${STEAMROOT}/config/config.vdf"
-  fi
+    cp -v "accounts/${u}.vdf" "${STEAMROOT}/config/config.vdf"
 fi
 
 # main loop, make sure functions are set properly so nothing breaks
