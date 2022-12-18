@@ -71,11 +71,13 @@ function checkprereqs {
     echo >&2 'unbuffer not found! Closing.'
     exit 1
   fi
-  if [[ ! -f "${STEAMROOT}/steamcmd.sh" ]]; then
-    echo 'steamcmd.sh not found! Downloading...'
-    mkdir -p "${STEAMROOT}"
-    curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - -C "${STEAMROOT}"
-    echo 'Done!'
+  if [[ ! $(command -v steamcmd) ]]; then
+    if [[ ! -f "${STEAMROOT}/steamcmd.sh" ]]; then
+      echo 'steamcmd.sh not found! Downloading...'
+      mkdir -p "${STEAMROOT}"
+      curl -sqL "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" | tar zxvf - -C "${STEAMROOT}"
+      echo 'Done!'
+    fi
   fi
   if [[ ! -f vdf2json.py ]]; then
     echo >&2 'vdf2json.py not found! Download it here: https://gist.githubusercontent.com/ynsta/7221512c583fbfbafe6d/raw/vdf2json.py'
