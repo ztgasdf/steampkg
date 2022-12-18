@@ -5,6 +5,7 @@ set -e
 
 # We're making this entire thing portable, I don't even care now
 HOME="$PWD"
+MAINDIR="$PWD"
 STEAMROOT="$PWD/Steam"
 
 ## Regex variables
@@ -204,10 +205,6 @@ function checksumforum {
   echo 'Done!'
 }
 
-# Check for missing commands and files BEFORE anything starts
-# TODO: Make it look pretty!
-checkprereqs
-
 # archives: finished game archives
 mkdir -p archives
 
@@ -264,6 +261,10 @@ while getopts "hnfb:c:p:x:u:l:" o; do
 done
 shift "$((OPTIND - 1))"
 
+# Check for missing commands and files BEFORE anything starts
+# TODO: Make it look pretty!
+checkprereqs
+
 # Self-explanatory, error out when nothing is specified
 if [[ "$#" == 0 ]]; then
   echo >&2 "Error: No appid specified"
@@ -293,8 +294,8 @@ else
     exit 1
   fi
     mkdir -p "${STEAMROOT}/config"
-    echo "Copying ${u}.vdf to config..."
-    cp -v "accounts/${u}.vdf" "${STEAMROOT}/config/config.vdf"
+    echo "Copying account to config..."
+    cp "accounts/${u}.vdf" "${STEAMROOT}/config/config.vdf"
 fi
 
 # main loop, make sure functions are set properly so nothing breaks
