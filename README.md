@@ -1,18 +1,17 @@
 # steampkg
+steampkg is a wrapper script for SteamCMD that downloads and packages games for easy archival.
 
-steampkg is a wrapper script for steamcmd that downloads and compresses games for easy archival.
+Run `./steampkg.sh -h` for full usage options.
 
-run `./steampkg.sh -h` for full usage options
+Requirements: python3, jq, 7z, unbuffer (expect package)
 
-requirements: **steamcmd.sh** (not package), python3, jq, 7z, unbuffer (expect package)- 
+If steamcmd.sh is NOT detected, then it will download it automatically.
 
 ## Account management
 
-**Warning**: If the script detects an existing config, it will create a backup located in `<script dir>/backups/` and then overwrite the existing config. **This will interfere with your existing Steam installation.** It is highly recommended that this script is run as a different user that does NOT have Steam installed (or an existing Steam folder.)
+Unlike other tools, steampkg utilises *cached credentials* obtained from Steam's config.vdf file. Only three keys are actually required, however: Accounts, MTBF, ConnectCache. These values would then be made into a new file, `accounts/<your username>.vdf`, located in the same directory as the script.
 
-As you might have noticed, steampkg will refuse to run unless a username is specified *and* found in `<script dir>/config/`. steampkg utilises cached credentials that can be found in your `config/config.vdf` file in your local Steam insallation. Only three keys are actually required, however: Accounts, MTBF, ConnectCache. These values would be made into a new file labeled `<your username>.vdf` in `config/`, located in the same directory as the script.
-
-Example (this would be tab-separated, no spaces [is this actually required? not sure]):
+Example account config (could be either tab or space-separated):
 
 ```
 "InstallConfigStore"
@@ -42,9 +41,10 @@ Example (this would be tab-separated, no spaces [is this actually required? not 
 ```
 
 ```
-$ ls config
+$ ls accounts
 username.vdf username2.vdf username3.vdf
-$ ./steampkg.sh -u username 4000   #Downloads Garry's Mod (assuming you own it) for Windows
+
+$ ./steampkg.sh -u username 4000   #Downloads Garry's Mod (assuming username owns it) for Windows
 ```
 
 
@@ -52,8 +52,8 @@ $ ./steampkg.sh -u username 4000   #Downloads Garry's Mod (assuming you own it) 
 
 todo:
 
- - add if statement for goldsrc games, ref. linuxgsm [here](https://github.com/GameServerManagers/LinuxGSM/blob/master/lgsm/functions/core_dl.sh)
  - allow selection for language (needs a fat regex)
+ - ~~add if statement for goldsrc games, ref. linuxgsm [here](https://github.com/GameServerManagers/LinuxGSM/blob/master/lgsm/functions/core_dl.sh)~~ unsure, might delete
 
 scripts used:
 
