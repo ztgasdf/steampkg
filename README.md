@@ -1,11 +1,9 @@
 # steampkg
-steampkg is a wrapper script for SteamCMD that downloads and packages games for easy archival.
-
-Run `./steampkg.sh -h` for full usage options.
-
-Requirements: python3, jq, 7z, unbuffer (expect package)
-
-If steamcmd.sh is NOT detected, then it will download it automatically.
+- steampkg is a wrapper script for SteamCMD that downloads and packages games for easy archival.
+- Run `./steampkg.sh -h` for full usage options.
+- Requirements: python3, jq, 7z, unbuffer (expect package)
+- If steamcmd.sh is NOT detected, then it will download it automatically.
+- [asciinema demo](https://asciinema.org/a/546526)
 
 ## Account management
 
