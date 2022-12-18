@@ -94,39 +94,35 @@ function checkprereqs {
 function nukecheck {
   # If Steam exists, check if nuke was already confirmed. If yes, skip check and nuke
   # If not, prompt warning.
-  if [[ "${STEAMALREADYEXISTS}" ]]; then
-    if [[ "${nuke}" == 2 ]]; then
+  if [[ "${NUKE}" == 2 ]]; then
+    nuke
+    return
+  fi
+
+  echo >&2 'WARNING: Running the nuke command will delete your depotcache and steamapps folder!'
+  echo >&2 "This shouldn't be a problem, since steamcmd is isolated, but we ask anyways."
+  echo >&2 "Tip: Pipe steampkg through yes or call nuke=2"
+
+  while true; do
+    read -p 'Are you sure you want to continue? (y/n) ' yn
+    case $yn in
+    [yY])
       nuke
       return
-    fi
-
-    echo >&2 "WARNING: An installation of Steam already exists! (${STEAMROOT})"
-    echo >&2 'Already installed games may interfere with the packaging process (user data, etc.)'
-    echo >&2 'Running the nuke command will irreparably delete your depotcache and steamapps folder!'
-
-    while true; do
-      read -p 'Are you sure you want to continue? (y/n) ' yn
-      case $yn in
-      [yY])
-        nuke
-        return
-        ;;
-      [nN])
-        echo Closing...
-        exit
-        ;;
-      *) echo Invalid response ;;
-      esac
-    done
-  else
-    nuke
-  fi
+      ;;
+    [nN])
+      echo Closing...
+      exit
+      ;;
+    *) echo Invalid response ;;
+    esac
+  done
 }
 
 function nuke {
   # Sets nuke variable so check won't run if multiple appids are specified
   # TODO, maybe check if folders exist or not? don't know if it's needed..
-  nuke=2
+  NUKE=2
   echo 'Deleting depotcache and steamapps...'
   rm -rf "${STEAMROOT}/depotcache" "${STEAMROOT}/steamapps"
   echo 'Done! Continuing.'
@@ -223,8 +219,8 @@ while getopts "hnfb:c:p:x:u:l:" o; do
     usage
     ;;
   n)
-    if [[ ! "${nuke}" == 2 ]]; then
-      nuke=1
+    if [[ ! "${NUKE}" == 2 ]]; then
+      NUKE=1
     fi
     ;;
   f)
