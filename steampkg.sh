@@ -3,7 +3,7 @@
 # ain't no one got time for functional error handling
 set -e
 
-# We're making this entire thing portable, I don't even care now
+# Path variables to 1) make SteamCMD portable 2) make parts of the script more bearable to read
 HOME="$PWD"
 MAINDIR="$PWD"
 STEAMROOT="$PWD/Steam"
@@ -33,7 +33,7 @@ Options:
          -l N   |  [default: 9] Sets 7z archive compression level
          -n     |  Nuke depotcache and steamapps before downloading
          -u     |  Username to login to Steam*
-         -f     |  internal: get checksum and forum text (publicinfos)
+         -f     |  internal: get info and output to file
 
 Refer to the README for information about account management.
 If -b/-c is passed, the script will only download the *first* appid specified."
@@ -41,13 +41,13 @@ If -b/-c is passed, the script will only download the *first* appid specified."
 }
 
 function main {
-  checkappid
   # Skip nuke if not called
-  [[ "${nuke}" ]] && nukecheck || :
+  [[ "${NUKE}" ]] && nukecheck || :
   download
   clean
   getacfinfo
   compress
+  # See function for more info
   [[ "${f}" ]] && checksumforum || :
 }
 
@@ -60,18 +60,23 @@ function checkappid {
 
 function checkprereqs {
   # check if required files and commands exist
+  # 7z is the main archive tool
   if [[ ! $(command -v 7z) ]]; then
     echo >&2 '7z not found! Closing.'
     exit 1
   fi
+  # jq is a JSON parser, used with vdf2json to parse appmanifest
   if [[ ! $(command -v jq) ]]; then
     echo >&2 'jq not found! Closing.'
     exit 1
   fi
+  # self-explanatory, unbuffers steamcmd's output so it can be piped without issues
   if [[ ! $(command -v unbuffer) ]]; then
     echo >&2 'unbuffer not found! Closing.'
     exit 1
   fi
+  # if steamcmd is not found in PATH, then check if script exists
+  # if script doesn't exist, download steamcmd
   if [[ ! $(command -v steamcmd) ]]; then
     if [[ ! -f "${STEAMROOT}/steamcmd.sh" ]]; then
       echo 'steamcmd.sh not found! Downloading...'
@@ -93,8 +98,11 @@ function checkprereqs {
 }
 
 function nukecheck {
-  # If Steam exists, check if nuke was already confirmed. If yes, skip check and nuke
-  # If not, prompt warning.
+  # When -n (nuke) is called, NUKE is set to 1. That allows the if statement
+  # in the main function to call this function. This function gives a y/n
+  # prompt asking if steamapps&depotcache should be wiped. If yes is input,
+  # NUKE is set to two, so if the script is called with multiple appids and -n,
+  # then it will automatically wipe steamapps&depotcache without asking again. 
   if [[ "${NUKE}" == 2 ]]; then
     nuke
     return
@@ -102,20 +110,22 @@ function nukecheck {
 
   echo >&2 'WARNING: Running the nuke command will delete your depotcache and steamapps folder!'
   echo >&2 "This shouldn't be a problem, since steamcmd is isolated, but we ask anyways."
-  echo >&2 "Tip: Pipe steampkg through yes or call nuke=2"
+  echo >&2 "Tip: Pipe steampkg through yes or call NUKE=2 to skip this prompt"
 
   while true; do
     read -p 'Are you sure you want to continue? (y/n) ' yn
     case $yn in
-    [yY])
-      nuke
-      return
-      ;;
-    [nN])
-      echo Closing...
-      exit
-      ;;
-    *) echo Invalid response ;;
+      [yY])
+        nuke
+        return
+        ;;
+      [nN])
+        echo Closing...
+        exit
+        ;;
+      *)
+        echo Invalid response
+        ;;
     esac
   done
 }
@@ -196,6 +206,10 @@ function compress {
 }
 
 function checksumforum {
+  # This is for internal use only!
+  # This function does two things:
+  #  1. Get BLAKE3 checksum and size; outputs to list
+  #  2. Create forum code for cs.rin.ru posting (Requires direct file host/redirector)
   echo 'Getting checksum...'
   CHECKSUM=$(b3sum "${MAINDIR}/archives/${FILENAME}" | cut -f1 -d' ')
   SIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}")
@@ -206,6 +220,7 @@ function checksumforum {
 }
 
 # archives: finished game archives
+# TODO: maybe set variable and or move this somewhere else?
 mkdir -p archives
 
 # Set options for the script
@@ -262,7 +277,6 @@ done
 shift "$((OPTIND - 1))"
 
 # Check for missing commands and files BEFORE anything starts
-# TODO: Make it look pretty!
 checkprereqs
 
 # Self-explanatory, error out when nothing is specified
@@ -298,7 +312,12 @@ else
     cp "accounts/${u}.vdf" "${STEAMROOT}/config/config.vdf"
 fi
 
+# Check appids before actually executing
+for i; do
+  checkappid
+done
+
 # main loop, make sure functions are set properly so nothing breaks
-for i in $@; do
+for i; do
   main
 done
