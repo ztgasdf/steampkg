@@ -28,6 +28,7 @@ Options:
          -h     |  Displays this message
          -b     |  Set branch
          -c     |  Set branch password
+         -m     |  Set steamapps location to music for music appids
          -p     |  [default: windows] Set install platform [windows/macos/linux]
          -x     |  [default: 64] Set bitness [32/64]
          -l N   |  [default: 9] Sets 7z archive compression level
@@ -199,9 +200,11 @@ function compress {
   # Compress game using 7z
   # If compression level is not set, default to 9
   [[ "${l}" ]] && : || l=9
+  # If -m flag is set, set folder to music
+  [[ "${music}" ]] && folder="music" || folder="common"
   # Run the damn thing!
   cd "${STEAMROOT}"
-  7z a -mx"${l}" "${MAINDIR}/archives/${FILENAME}" $(for i in "${DEPOTS[@]}"; do echo "depotcache/${i}"; done) steamapps/appmanifest_"${i}".acf steamapps/common/"${INSTALLDIR}"
+  7z a -mx"${l}" "${MAINDIR}/archives/${FILENAME}" $(for i in "${DEPOTS[@]}"; do echo "depotcache/${i}"; done) steamapps/appmanifest_"${i}".acf steamapps/"${folder}"/"${INSTALLDIR}"
   cd "${MAINDIR}"
 }
 
@@ -225,10 +228,13 @@ mkdir -p archives
 
 # Set options for the script
 # TODO: Organise/order it properly
-while getopts "hnfb:c:p:x:u:l:" o; do
+while getopts "hmnfb:c:p:x:u:l:" o; do
   case "${o}" in
   h)
     usage
+    ;;
+  m)
+    music=1
     ;;
   n)
     if [[ ! "${NUKE}" == 2 ]]; then
