@@ -4,9 +4,9 @@
 set -e
 
 # Path variables to 1) make SteamCMD portable 2) make parts of the script more bearable to read
-HOME="$PWD"
-MAINDIR="$PWD"
-STEAMROOT="$PWD/Steam"
+HOME="${PWD}"
+MAINDIR="${PWD}"
+STEAMROOT="${PWD}/Steam"
 
 ## Regex variables
 # Check if appid consists only of numbers
@@ -217,7 +217,11 @@ function checksumforum {
   CHECKSUM=$(b3sum "${MAINDIR}/archives/${FILENAME}" | cut -f1 -d' ')
   SIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}")
   FMTSIZE=$(stat -c %s "${MAINDIR}/archives/${FILENAME}" | numfmt --to=iec-i --suffix=B --format="%.3f")
-  echo "${CHECKSUM} | ${FILENAME} | ${SIZE}" >> publicinfos
+  echo "  <tr>
+    <td>${CHECKSUM}</td>
+    <td>${FILENAME}</td>
+    <td>${SIZE}</td>
+  </tr>" >> publicinfos
   echo "[url=https://z.tess.eu.org/rin/${CHECKSUM}][b][color=#FFFFFF]${FILENAME}[/color][/b][/url] [size=85][color=#FFFFFF]${FMTSIZE}[/color][/size]" >> publicinfos
   echo 'Done!'
 }
