@@ -50,7 +50,6 @@ $ ./steampkg.sh -u username 4000   #Downloads Garry's Mod (assuming username own
 
 todo:
 
- - allow selection for language (needs a fat regex)
  - ~~add if statement for goldsrc games, ref. linuxgsm [here](https://github.com/GameServerManagers/LinuxGSM/blob/master/lgsm/functions/core_dl.sh)~~ unsure, might delete
 
 scripts used:

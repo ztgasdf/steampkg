@@ -19,6 +19,8 @@ platformRegex='^(windows|linux|macos)$'
 bitnessRegex='^(32|64)$'
 # Allow only 0-9 to be used
 compressRegex='^[0-9]$'
+# Supported languages
+languageRegex='^(arabic|bulgarian|schinese|tchinese|czech|danish|dutch|english|finnish|french|german|greek|hungarian|italian|japanese|koreana|norwegian|polish|portuguese|brazilian|romanian|russian|spanish|latam|swedish|thai|turkish|ukrainian|vietnamese)$'
 
 function usage {
   echo "steampkg, a SteamCMD wrapper for downloading & packaging games
@@ -29,6 +31,7 @@ Options:
          -b     |  Set branch
          -c     |  Set branch password
          -m     |  Set steamapps location to music for music appids
+         -z     |  Set language (see code for supported languages)
          -p     |  [default: windows] Set install platform [windows/macos/linux]
          -x     |  [default: 64] Set bitness [32/64]
          -l N   |  [default: 9] Sets 7z archive compression level
@@ -149,6 +152,8 @@ function download {
   [[ "${p}" ]] && : || p="windows"
   # If no bitness is set, default to 64bit
   [[ "${x}" ]] && : || x="64"
+  # If no language is set, then leave blank
+  [[ "${lang}" ]] && : || lang=" "
   # SteamCMD handles beta branches weirdly. If a branch is set, it will
   # download said branch. If you run the script again, but with no branch
   # set (assuming NUKE is off), it will think that branch is still set and
@@ -158,10 +163,10 @@ function download {
   [[ "${b}" ]] && : || b=" "
   # If branch password is set, run with -betapassword called
   if [[ "${c}" ]]; then
-    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
+    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -language "${lang}" -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
     errorcheck
   else
-    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -beta "${b}" +quit | grep -iE ${steamRegex}
+    unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -language "${lang}" -beta "${b}" +quit | grep -iE ${steamRegex}
     errorcheck
   fi
 }
@@ -232,7 +237,7 @@ mkdir -p archives
 
 # Set options for the script
 # TODO: Organise/order it properly
-while getopts "hmnfb:c:p:x:u:l:" o; do
+while getopts "hmnfb:c:p:x:u:l:z:" o; do
   case "${o}" in
   h)
     usage
@@ -279,6 +284,13 @@ while getopts "hmnfb:c:p:x:u:l:" o; do
     x=${OPTARG}
     if [[ "${x}" =~ $bitnessRegex ]]; then :; else
       echo >&2 "Error: Specified bitness is invalid! [32/64]"
+      exit 1
+    fi
+    ;;
+  z)
+    lang=${OPTARG}
+    if [[ "${lang}" =~ $languageRegex ]]; then :; else
+      echo >&2 "Error: Unsupported language!"
       exit 1
     fi
     ;;
