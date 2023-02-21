@@ -152,8 +152,8 @@ function download {
   [[ "${p}" ]] && : || p="windows"
   # If no bitness is set, default to 64bit
   [[ "${x}" ]] && : || x="64"
-  # If no language is set, then leave blank
-  [[ "${lang}" ]] && : || lang=" "
+  # If no language is set, set to english because blank breaks it
+  [[ "${lang}" ]] && : || lang="english"
   # SteamCMD handles beta branches weirdly. If a branch is set, it will
   # download said branch. If you run the script again, but with no branch
   # set (assuming NUKE is off), it will think that branch is still set and
