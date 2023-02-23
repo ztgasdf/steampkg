@@ -12,7 +12,7 @@ STEAMROOT="${PWD}/Steam"
 # Check if appid consists only of numbers
 appidRegex='^[0-9]*$'
 # Clean up SteamCMD output (might be excessive)
-steamRegex='update|success|install|clean|ok|check|package|extract|workshop|version|='
+steamRegex='update|success|install|clean|ok|check|package|extract|workshop|version|=|failed|access|denied'
 # Allow only these platforms to be used
 platformRegex='^(windows|linux|macos)$'
 # Allow only these bits to be used
@@ -164,21 +164,23 @@ function download {
   # If branch password is set, run with -betapassword called
   if [[ "${c}" ]]; then
     unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -language "${lang}" -beta "${b}" -betapassword "${c}" +quit | grep -iE ${steamRegex}
+    EXITCODE="${PIPESTATUS[0]}"
     errorcheck
   else
     unbuffer "${STEAMROOT}/steamcmd.sh" +login "${u}" +@sSteamCmdForcePlatformType "${p}" +@sSteamCmdForcePlatformBitness "${x}" +app_update "${i}" -validate -language "${lang}" -beta "${b}" +quit | grep -iE ${steamRegex}
+    EXITCODE="${PIPESTATUS[0]}"
     errorcheck
   fi
 }
 
 function errorcheck {
-  if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
+  if [[ "${EXITCODE}" -ne 0 ]]; then
     if [[ "${ohno}" -eq 2 ]]; then
       echo >&2 'Error: SteamCMD failed after retry, halting.'
       exit 1
     fi
     ((ohno=ohno+1))
-    echo >&2 'Warning: SteamCMD failed with error 8. Retrying!'
+    echo >&2 "Error: SteamCMD closed with exit code ${EXITCODE}. Retrying!"
     download
   fi
 }
